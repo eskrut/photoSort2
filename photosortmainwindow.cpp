@@ -73,7 +73,7 @@ void PhotoSortMainWindow::createShortCuts()
 
 void PhotoSortMainWindow::openDir()
 {
-    preview_->setEnabled(false);
+//    preview_->setEnabled(false);
     auto dir = QFileDialog::getExistingDirectory(this,
                                                  tr("Choose directory to open"),
                                                  settings_->value("lastReadDir", QString()).toString());
@@ -88,7 +88,7 @@ void PhotoSortMainWindow::openDir()
 
 void PhotoSortMainWindow::onLoadFinished()
 {
-    preview_->setEnabled(true);
+//    preview_->setEnabled(true);
     progBar_->hide();
     preview_->setCurrentIndex(model_->index(0, 0));
     preview_->setFocus();

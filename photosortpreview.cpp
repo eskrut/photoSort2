@@ -89,7 +89,7 @@ void PhotoSortPreview::keyPressEvent(QKeyEvent *event)
     case Actions::FocusToNext:
     {
         auto ind = selectionModel()->currentIndex();
-        if(ind.row() < model()->rowCount()){
+        if(ind.row() < model()->rowCount() - 1){
             selectionModel()->select(ind, QItemSelectionModel::Deselect);
             selectionModel()->select(model()->index(ind.row()+1, 0), QItemSelectionModel::Select);
             selectionModel()->setCurrentIndex(model()->index(ind.row()+1, 0), QItemSelectionModel::NoUpdate);
@@ -111,7 +111,7 @@ void PhotoSortPreview::keyPressEvent(QKeyEvent *event)
     case Actions::ToggleSelectionFocusToNext:
     {
         auto ind = selectionModel()->currentIndex();
-        if(ind.row() < model()->rowCount())
+        if(ind.row() < model()->rowCount() - 1)
             selectionModel()->setCurrentIndex(model()->index(ind.row()+1, 0), QItemSelectionModel::Toggle);
         event->accept();
         break;

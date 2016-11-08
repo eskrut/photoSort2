@@ -51,6 +51,9 @@ QVariant PhotoSortItem::data(int role) const
     case AcceptRole:
         return QVariant::fromValue<>(isAccepted_);
         break;
+    case PixmapRole:
+        return pixmap_;
+        break;
     default:
         return QStandardItem::data(role);
     }
