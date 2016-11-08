@@ -19,7 +19,12 @@ private:
         UnGroup,
         Accept,
         Reject,
-        SwapAcceptReject
+        SwapAcceptReject,
+        FocusToNext,
+        FocusToPrev,
+        ToggleSelectionFocusToNext,
+        ToggleSelectionFocusToPrev,
+        ClearSelection
     };
     QMap<Actions, int> actionMap_;
     void generateDefaultActionMap();

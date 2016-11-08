@@ -17,8 +17,8 @@ signals:
     void loaded();
 public slots:
     void readDir(QString path);
-    void group(QModelIndexList indexes);
-    void ungroup(QModelIndexList indexes);
+    QModelIndex group(QModelIndexList indexes);
+    QModelIndexList ungroup(QModelIndexList indexes);
 private:
     std::mutex mapMutex_;
     std::map<int, int> doneMap_;
@@ -28,6 +28,8 @@ signals:
     void progress(int);
 private:
     QStringList parse(const QString &path);
+    void read();
+    void write();
 public:
     PhotoSortItem *photoItem(int row);
 };

@@ -68,6 +68,10 @@ void PhotoSortItem::setData(const QVariant &value, int role)
     case AcceptRole:
         isAccepted_ = value.toBool();
         break;
+    case PixmapRole:
+        pixmap_ = value.value<QPixmap>();
+        setData(pixmap_.scaled(QSize(150, 150), Qt::KeepAspectRatio), Qt::DecorationRole);
+        break;
     default:
         QStandardItem::setData(value, role);
         break;
@@ -80,4 +84,25 @@ int PhotoSortItem::type() const
         return SingleImage;
     else
         return Group;
+}
+
+void PhotoSortItem::read(QDataStream &in)
+{
+    qint32 num;
+    in >> num;
+    in >> path_ >> tags_ >> isAccepted_;
+    for(int ct = 0; ct < num; ++ct) {
+        auto ph = new PhotoSortItem;
+        ph->read(in);
+        appendRow(ph);
+    }
+}
+
+void PhotoSortItem::write(QDataStream &out) const
+{
+    out << qint32(rowCount());
+    out << path_ << tags_ << isAccepted_;
+    for(int ct = 0; ct < rowCount(); ++ct) {
+        child(ct, 0)->write(out);
+    }
 }

@@ -9,6 +9,8 @@
 #include <future>
 #include <thread>
 
+#include <set>
+
 #include "photosortitem.h"
 
 PhotoSortModel::PhotoSortModel(QObject *parent) :
@@ -22,6 +24,8 @@ void PhotoSortModel::readDir(QString path)
     auto entries = parse(path);
 
     QPixmap p(QApplication::style()->standardIcon(QStyle::StandardPixmap::SP_MessageBoxQuestion).pixmap(QSize(150, 150)));
+
+    //TODO read cache here
     for(const auto &e : entries) {
         auto photo = new PhotoSortItem;
         photo->setData(e, PhotoSortItem::PathRole);
@@ -29,14 +33,37 @@ void PhotoSortModel::readDir(QString path)
         invisibleRootItem()->appendRow(photo);
     }
     unsigned numRows = invisibleRootItem()->rowCount();
+    auto getThumbnailPath = [](const QString &filePath) -> QString {
+        QFileInfo originFI(filePath);
+        return originFI.absolutePath() + "/.thumbnails/" + originFI.fileName();
+    };
     auto read = [=](int id, int start, int stop){
         for(int row = start; row < stop; ++row) {
             auto photo = photoItem(row);
             auto imgPath = photo->data(PhotoSortItem::PathRole).toString();
-            photo->setData(QPixmap(path + "/" + imgPath).scaled(QSize(150, 150), Qt::KeepAspectRatio), Qt::DecorationRole);
-            this->itemChanged(photo);
+            if( ! imgPath.isEmpty() ) {
+                auto thumbnailPath = getThumbnailPath(path + "/" + imgPath);
+                bool isLoaded = false;
+                QPixmap p;
+                if(QFileInfo(thumbnailPath).exists()) {
+                    try {
+                        p = QPixmap::fromImage(QImage(thumbnailPath));
+                        photo->setData(p, PhotoSortItem::PixmapRole);
+                        isLoaded = true;
+                    }
+                    catch(...){}
+                }
+                if( ! isLoaded ) {
+                    p = QPixmap(path + "/" + imgPath).scaled(QSize(600, 600), Qt::KeepAspectRatio);
+                    photo->setData(p, PhotoSortItem::PixmapRole);
+                    auto thisImgPath = QFileInfo(path + "/" + imgPath).absolutePath();
+                    if ( !QDir(thisImgPath+"/.thumbnails").exists() )
+                        QDir(thisImgPath).mkdir(".thumbnails");
+                    p.save(thumbnailPath);
+                }
+            }
             if(row % 10 == 0)
-                this->partialDone(id, row - start);
+                QMetaObject::invokeMethod(this, "partialDone", Qt::QueuedConnection, Q_ARG(int, id), Q_ARG(int, row-start));
         }
         return 0;
     };
@@ -59,25 +86,33 @@ void PhotoSortModel::readDir(QString path)
         itemChanged(photoItem(row));
 }
 
-void PhotoSortModel::group(QModelIndexList indexes)
+QModelIndex PhotoSortModel::group(QModelIndexList indexes)
 {
     QList<QPersistentModelIndex> persist;
     for(auto &i : indexes)
         persist << QPersistentModelIndex(i);
     auto grItem = new PhotoSortItem;
     insertRow(persist.front().row(), grItem);
+    std::set<int> rowsToDelete;
     for(auto p = persist.begin(); p != persist.end(); ++p) {
+        rowsToDelete.insert(p->row());
         grItem->appendRow(takeItem(p->row()));
     }
-//    QPixmap p(QApplication::style()->standardIcon(QStyle::StandardPixmap::SP_MessageBoxQuestion).pixmap(QSize(150, 150)));
-//    grItem->setData(p, Qt::DecorationRole);
+    for(auto r = rowsToDelete.rbegin(); r != rowsToDelete.rend(); ++r) {
+        removeRow(*r);
+    }
+    dataChanged(index(0, 0), index(rowCount(), 0), QVector<int>() << Qt::DisplayRole << Qt::DecorationRole);
+    write();
+    return grItem->index();
 }
 
-void PhotoSortModel::ungroup(QModelIndexList indexes)
+QModelIndexList PhotoSortModel::ungroup(QModelIndexList indexes)
 {
     QList<QPersistentModelIndex> persist;
+    QModelIndexList newIndexes;
     for(auto &i : indexes)
         persist << QPersistentModelIndex(i);
+    QList<QStandardItem *> allInsertedItems;
     for(auto p = persist.begin(); p != persist.end(); ++p) {
         int rowToInsert = p->row();
         auto g = photoItem(rowToInsert);
@@ -87,10 +122,15 @@ void PhotoSortModel::ungroup(QModelIndexList indexes)
         QList<QStandardItem *> items;
         for(int ct = 0; ct < numRows; ++ct) {
             items << g->takeChild(ct);
+            allInsertedItems << items.back();
         }
         invisibleRootItem()->insertRows(rowToInsert, items);
-        delete g;
+        removeRow(g->row());
+//        delete g;
     }
+    for(auto i : allInsertedItems)
+        newIndexes << i->index();
+    return newIndexes;
 }
 
 void PhotoSortModel::partialDone(int id, int num)
@@ -104,6 +144,7 @@ void PhotoSortModel::partialDone(int id, int num)
         cur += it->second;
     }
     emit(progress(cur*100/all));
+    emit(dataChanged(index(0, 0), index(rowCount(), 0), QVector<int>() << Qt::DecorationRole));
 }
 
 QStringList PhotoSortModel::parse(const QString &path)
@@ -115,12 +156,36 @@ QStringList PhotoSortModel::parse(const QString &path)
     auto dirs = dir.entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::SortFlag::Name);
 
     for(const auto &d : dirs) {
-        files << parse(path+"/"+d);
+        if(d != QString(".thumbnails"))
+            files << parse(path+"/"+d);
     }
 
     files << dir.entryList(QStringList() << "*.jpeg" << "*.jpg", QDir::Files | QDir::NoDotAndDotDot, QDir::SortFlag::Name);
 
     return files;
+}
+
+void PhotoSortModel::read()
+{
+    QFile file(".cache");
+    file.open(QIODevice::ReadOnly);
+    QDataStream in(&file);
+    qint32 count;
+    in >> count;
+    for(int ct = 0; ct < count; ++ct) {
+        auto item = new PhotoSortItem;
+        item->read(in);
+    }
+}
+
+void PhotoSortModel::write()
+{
+    QFile file(".cache");
+    file.open(QIODevice::WriteOnly);
+    QDataStream out(&file);
+    out << qint32(rowCount());
+    for(int r = 0; r < rowCount(); ++r)
+        item(r, 0)->write(out);
 }
 
 PhotoSortItem *PhotoSortModel::photoItem(int row)

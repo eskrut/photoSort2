@@ -16,18 +16,27 @@ public:
     enum {
         PathRole = Qt::UserRole,
         TagsRole,
-        AcceptRole
+        AcceptRole,
+        PixmapRole
     };
 
 private:
     QString path_;
     QStringList tags_;
     bool isAccepted_;
+    QPixmap pixmap_;
 
 public:
     QVariant data(int role) const;
     void setData(const QVariant &value, int role);
     int type() const;
+
+    // QStandardItem interface
+public:
+    void read(QDataStream &in);
+    void write(QDataStream &out) const;
 };
+
+
 
 #endif // PHOTOSORTITEM_H

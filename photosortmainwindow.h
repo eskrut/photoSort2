@@ -6,6 +6,7 @@
 #include <QListView>
 #include <QGraphicsView>
 #include <QProgressBar>
+#include <QSettings>
 
 class DetailScene;
 class PhotoSortModel;
@@ -16,6 +17,7 @@ class PhotoSortMainWindow : public QMainWindow
     Q_OBJECT
 public:
     explicit PhotoSortMainWindow(QWidget *parent = nullptr);
+    ~PhotoSortMainWindow();
 
 private:
     PhotoSortPreview *preview_;
@@ -23,6 +25,7 @@ private:
     QGraphicsView *detailView_;
     DetailScene *detailScene_;
     QProgressBar *progBar_;
+    QSettings *settings_;
 
 private:
     void createConnections();
