@@ -20,17 +20,27 @@ private:
         Accept,
         Reject,
         SwapAcceptReject,
+        AcceptOnly,
+        RejectAll,
         FocusToNext,
         FocusToPrev,
         ToggleSelectionFocusToNext,
         ToggleSelectionFocusToPrev,
-        ClearSelection
+        ClearSelection,
+        DetailedLeft,
+        DetailedRight
     };
     QMap<Actions, int> actionMap_;
     void generateDefaultActionMap();
 
 signals:
-
+    void accept();
+    void reject();
+    void toggle();
+    void acceptOnly();
+    void rejectAll();
+    void leftInGroup();
+    void rightInGroup();
 public slots:
 
 protected:

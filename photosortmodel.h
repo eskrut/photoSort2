@@ -24,6 +24,7 @@ private:
 public slots:
     QModelIndex group(QModelIndexList indexes);
     QModelIndexList ungroup(QModelIndexList indexes);
+    void sync();
 private:
     std::mutex mapMutex_;
     std::map<int, int> doneMap_;
@@ -35,6 +36,7 @@ private:
     QStringList parse(const QString &path);
     void read(const QString &path);
     void write(const QString &path);
+    void flatItem(PhotoSortItem *item);
 public:
     PhotoSortItem *photoItem(int row);
 };

@@ -4,6 +4,8 @@
 #include <QStyle>
 #include <QPainter>
 
+Q_DECLARE_METATYPE(PHListType)
+
 PhotoSortItem::PhotoSortItem() :
     isAccepted_(false)
 {
@@ -17,7 +19,7 @@ QVariant PhotoSortItem::data(int role) const
         if(type() == SingleImage)
             return path_;
         else
-            return QString::number(rowCount());
+            return QString::number(allItems().size());
         break;
     case Qt::DecorationRole:
         if(type() == SingleImage) {
@@ -54,6 +56,29 @@ QVariant PhotoSortItem::data(int role) const
     case PixmapRole:
         return pixmap_;
         break;
+    case AllItems:
+    {
+        PHListType all;
+        const int count = rowCount();
+        if( count ) {
+            for(int ct = 0; ct < count; ++ct)
+                all << child(ct)->data(AllItems).value<PHListType>();
+        }
+        else
+            all << const_cast<PhotoSortItem*>(this);
+        return QVariant::fromValue<PHListType>(all);
+        break;
+    }
+    case Qt::ToolTipRole:
+    {
+        QString tt;
+        auto all = allItems();
+        for(const auto &i : all) {
+            tt.append(i->text() + "\n");
+        }
+        return tt;
+        break;
+    }
     default:
         return QStandardItem::data(role);
     }
@@ -89,14 +114,32 @@ int PhotoSortItem::type() const
         return Group;
 }
 
+PHListType PhotoSortItem::allItems() const
+{
+    return data(AllItems).value<PHListType>();
+}
+
+bool PhotoSortItem::isAccepted() const
+{
+    return data(AcceptRole).toBool();
+}
+
+QPixmap PhotoSortItem::pixmap() const
+{
+    return data(PixmapRole).value<QPixmap>();
+}
+
 void PhotoSortItem::read(QDataStream &in)
 {
+    QPixmap p(QApplication::style()->standardIcon(QStyle::StandardPixmap::SP_MessageBoxQuestion).pixmap(QSize(150, 150)));
     qint32 num;
     in >> num;
     in >> path_ >> tags_ >> isAccepted_;
+    setData(p, Qt::DecorationRole);
     for(int ct = 0; ct < num; ++ct) {
         auto ph = new PhotoSortItem;
         ph->read(in);
+        ph->setData(p, Qt::DecorationRole);
         appendRow(ph);
     }
 }

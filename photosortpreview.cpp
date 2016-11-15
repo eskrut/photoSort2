@@ -27,6 +27,8 @@ void PhotoSortPreview::generateDefaultActionMap()
     actionMap_[Actions::UnGroup] = Qt::Key_T;
     actionMap_[Actions::Accept] = Qt::Key_A;
     actionMap_[Actions::Reject] = Qt::Key_S;
+    actionMap_[Actions::AcceptOnly] = Qt::Key_Q;
+    actionMap_[Actions::RejectAll] = Qt::Key_W;
     actionMap_[Actions::SwapAcceptReject] = Qt::Key_E;
 
     actionMap_[Actions::ToggleSelectionFocusToNext] = Qt::Key_J;
@@ -34,6 +36,9 @@ void PhotoSortPreview::generateDefaultActionMap()
     actionMap_[Actions::FocusToNext] = Qt::Key_M;
     actionMap_[Actions::FocusToPrev] = Qt::Key_N;
     actionMap_[Actions::ClearSelection] = Qt::Key_U;
+
+    actionMap_[Actions::DetailedRight] = Qt::Key_K;
+    actionMap_[Actions::DetailedLeft] = Qt::Key_L;
 }
 
 void PhotoSortPreview::keyPressEvent(QKeyEvent *event)
@@ -45,26 +50,23 @@ void PhotoSortPreview::keyPressEvent(QKeyEvent *event)
 
     switch (act) {
     case Actions::Accept:
-        for(auto &i : items) {
-            phModel_->photoItem(i.row())->setData(QVariant::fromValue<>(true), PhotoSortItem::AcceptRole);
-            update(phModel_->photoItem(i.row())->index());
-        }
+        emit(accept());
+        event->accept();
+        break;
+    case Actions::AcceptOnly:
+        emit(acceptOnly());
         event->accept();
         break;
     case Actions::Reject:
-        for(auto &i : items) {
-            phModel_->photoItem(i.row())->setData(QVariant::fromValue<>(false), PhotoSortItem::AcceptRole);
-            update(phModel_->photoItem(i.row())->index());
-        }
+        emit(reject());
+        event->accept();
+        break;
+    case Actions::RejectAll:
+        emit(rejectAll());
         event->accept();
         break;
     case Actions::SwapAcceptReject:
-        for(auto &i : items) {
-            auto ph = phModel_->photoItem(i.row());
-            auto val = ! ph->data(PhotoSortItem::AcceptRole).toBool();
-            ph->setData(QVariant::fromValue<>(val), PhotoSortItem::AcceptRole);
-            update(ph->index());
-        }
+        emit(toggle());
         event->accept();
         break;
     case Actions::Group:
@@ -131,6 +133,14 @@ void PhotoSortPreview::keyPressEvent(QKeyEvent *event)
         break;
     }
     case Actions::NoAction:
+        event->accept();
+        break;
+    case Actions::DetailedLeft:
+        emit(leftInGroup());
+        event->accept();
+        break;
+    case Actions::DetailedRight:
+        emit(rightInGroup());
         event->accept();
         break;
     default:

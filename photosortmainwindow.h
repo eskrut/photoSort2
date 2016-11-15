@@ -26,6 +26,7 @@ private:
     DetailScene *detailScene_;
     QProgressBar *progBar_;
     QSettings *settings_;
+    QThread *modelThread_;
 
 private:
     void createConnections();

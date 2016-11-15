@@ -16,6 +16,7 @@ set(SRC_LIST
     photosortmodel.h      photosortmodel.cpp
     photosortitem.h       photosortitem.cpp
     detailscene.h         detailscene.cpp
+    photodetaileditem.h   photodetaileditem.cpp
     )
 
 set(Srcs ${SRC_LIST})
@@ -38,3 +39,4 @@ else()
     error("Not implemented")
 endif()
 
+target_link_libraries(${PROJECT_NAME} exif)

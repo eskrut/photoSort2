@@ -4,6 +4,9 @@
 #include "QStandardItem"
 #include "QPixmap"
 
+class PhotoSortItem;
+using PHListType = QList<PhotoSortItem*>;
+
 class PhotoSortItem : public QStandardItem
 {
 public:
@@ -17,7 +20,8 @@ public:
         PathRole = Qt::UserRole,
         TagsRole,
         AcceptRole,
-        PixmapRole
+        PixmapRole,
+        AllItems
     };
 
 private:
@@ -30,6 +34,10 @@ public:
     QVariant data(int role) const;
     void setData(const QVariant &value, int role);
     int type() const;
+    PHListType allItems() const;
+
+    bool isAccepted() const;
+    QPixmap pixmap() const;
 
     // QStandardItem interface
 public:

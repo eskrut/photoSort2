@@ -12,6 +12,64 @@
 #include <set>
 
 #include "photosortitem.h"
+#include "libexif/exif-data.h"
+
+QString getThumbnailPath(const QString &filePath){
+    QFileInfo originFI(filePath);
+    return originFI.absolutePath() + "/.thumbnails/" + originFI.fileName();
+}
+
+void readSinglePhoto(PhotoSortItem *photo, const QString &path){
+    auto imgPath = photo->data(PhotoSortItem::PathRole).toString();
+    if( ! imgPath.isEmpty() ) {
+        auto thumbnailPath = getThumbnailPath(path + "/" + imgPath);
+        bool isLoaded = false;
+        QPixmap p;
+        if(QFileInfo(thumbnailPath).exists()) {
+            try {
+                auto img = QImage(thumbnailPath);
+                p = QPixmap::fromImage(img);
+                photo->setData(p, PhotoSortItem::PixmapRole);
+                isLoaded = true;
+            }
+            catch(...){}
+        }
+        if( ! isLoaded ) {
+            auto img = QImage(path + "/" + imgPath);
+            ExifData *eData = exif_data_new_from_file((path + "/" + imgPath).toLocal8Bit());
+            int orientation = 0;
+            if (eData) {
+                ExifByteOrder byteOrder = exif_data_get_byte_order(eData);
+                ExifEntry *exifEntry = exif_data_get_entry(eData,
+                                                           EXIF_TAG_ORIENTATION);
+                if (exifEntry)
+                    orientation = exif_get_short(exifEntry->data, byteOrder);
+                exif_data_free(eData);
+            }
+            if(orientation == 8) {
+                QTransform tr;
+                tr.rotate(-90);
+                img = img.transformed(tr);
+            }
+            p = QPixmap::fromImage(img).scaled(QSize(800, 800), Qt::KeepAspectRatio);
+            photo->setData(p, PhotoSortItem::PixmapRole);
+            auto thisImgPath = QFileInfo(path + "/" + imgPath).absolutePath();
+            if ( !QDir(thisImgPath+"/.thumbnails").exists() )
+                QDir(thisImgPath).mkdir(".thumbnails");
+            p.save(thumbnailPath);
+        }
+    }
+}
+int readDown(PhotoSortItem *item, const QString& path){
+    if(item->rowCount() == 0)
+        readSinglePhoto(item, path);
+    else {
+        for(int ct = 0; ct < item->rowCount(); ++ct) {
+            readDown(reinterpret_cast<PhotoSortItem*>(item->child(ct)), path);
+        }
+    }
+    return 0;
+}
 
 PhotoSortModel::PhotoSortModel(QObject *parent) :
     QStandardItemModel(parent)
@@ -48,44 +106,12 @@ void PhotoSortModel::build(QString path)
 void PhotoSortModel::fill(const QString &path)
 {
     unsigned numRows = invisibleRootItem()->rowCount();
-    auto getThumbnailPath = [](const QString &filePath) -> QString {
-        QFileInfo originFI(filePath);
-        return originFI.absolutePath() + "/.thumbnails/" + originFI.fileName();
-    };
-    auto readSinglePhoto = [=](PhotoSortItem *photo, const QString &path){
-        auto imgPath = photo->data(PhotoSortItem::PathRole).toString();
-        if( ! imgPath.isEmpty() ) {
-            auto thumbnailPath = getThumbnailPath(path + "/" + imgPath);
-            bool isLoaded = false;
-            QPixmap p;
-            if(QFileInfo(thumbnailPath).exists()) {
-                try {
-                    p = QPixmap::fromImage(QImage(thumbnailPath));
-                    photo->setData(p, PhotoSortItem::PixmapRole);
-                    isLoaded = true;
-                }
-                catch(...){}
-            }
-            if( ! isLoaded ) {
-                p = QPixmap::fromImage(QImage(path + "/" + imgPath)).scaled(QSize(600, 600), Qt::KeepAspectRatio);
-                photo->setData(p, PhotoSortItem::PixmapRole);
-                auto thisImgPath = QFileInfo(path + "/" + imgPath).absolutePath();
-                if ( !QDir(thisImgPath+"/.thumbnails").exists() )
-                    QDir(thisImgPath).mkdir(".thumbnails");
-                p.save(thumbnailPath);
-            }
-        }
-    };
-    auto read = [=](int id, int start, int stop){
+
+    auto read = [this,path](int id, int start, int stop){
         for(int row = start; row < stop; ++row) {
             auto photo = photoItem(row);
-            if(photo->rowCount() == 0)
-                readSinglePhoto(photo, path);
-            else {
-                for(int ct = 0; ct < photo->rowCount(); ++ct)
-                    readSinglePhoto(reinterpret_cast<PhotoSortItem*>(photo->child(ct)), path);
-            }
-            if(row % 10 == 0)
+            readDown(photo, path);
+//            if(row % 10 == 0)
                 QMetaObject::invokeMethod(this, "partialDone", Qt::DirectConnection, Q_ARG(int, id), Q_ARG(int, row-start));
         }
         return 0;
@@ -93,7 +119,7 @@ void PhotoSortModel::fill(const QString &path)
     doneMap_.clear();
     doneMap_[-1] = numRows;
     std::list<std::future<int>> futures;
-    unsigned numThreads = std::thread::hardware_concurrency() - 1;
+    unsigned numThreads = std::thread::hardware_concurrency();
     for(unsigned ct = 0; ct < numThreads; ++ct) {
         doneMap_[ct] = 0;
         unsigned start = (ct*numRows)/numThreads;
@@ -156,6 +182,12 @@ QModelIndexList PhotoSortModel::ungroup(QModelIndexList indexes)
     return newIndexes;
 }
 
+void PhotoSortModel::sync()
+{
+    if( ! workDir_.isEmpty() )
+        write(workDir_);
+}
+
 void PhotoSortModel::partialDone(int id, int num)
 {
     std::lock_guard<std::mutex> lock(mapMutex_);
@@ -167,7 +199,7 @@ void PhotoSortModel::partialDone(int id, int num)
         cur += it->second;
     }
     emit(progress(cur*100/all));
-    emit(dataChanged(index(0, 0), index(rowCount(), 0), QVector<int>() << Qt::DecorationRole));
+    emit(dataChanged(index(0, 0), index(rowCount(), 0), QVector<int>() << Qt::DisplayRole << Qt::DecorationRole));
 }
 
 QStringList PhotoSortModel::parse(const QString &path)
@@ -179,13 +211,16 @@ QStringList PhotoSortModel::parse(const QString &path)
     auto dirs = dir.entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::SortFlag::Name);
 
     for(const auto &d : dirs) {
-        if(d != QString(".thumbnails"))
-            files << parse(path+"/"+d);
+        if(d != QString(".thumbnails")) {
+            auto dFiles = parse(path+"/"+d);
+            for(const auto &dFile : dFiles)
+                files << d + "/" + dFile;
+        }
     }
 
     auto entries = dir.entryList(QStringList() << "*.jpeg" << "*.jpg", QDir::Files | QDir::NoDotAndDotDot, QDir::SortFlag::Name);
     for(const auto &e :  entries){
-        files << dir.dirName() + "/" + e;
+        files << e;
     }
 
     return files;
@@ -203,6 +238,7 @@ void PhotoSortModel::read(const QString &path)
         item->read(in);
         invisibleRootItem()->appendRow(item);
     }
+    emit(dataChanged(index(0, 0), index(rowCount(), 0), QVector<int>() << Qt::DisplayRole << Qt::DecorationRole));
 }
 
 void PhotoSortModel::write(const QString &path)
@@ -213,6 +249,15 @@ void PhotoSortModel::write(const QString &path)
     out << qint32(rowCount());
     for(int r = 0; r < rowCount(); ++r)
         item(r, 0)->write(out);
+}
+
+void PhotoSortModel::flatItem(PhotoSortItem *item)
+{
+    auto allItems = item->allItems();
+    allItems.removeOne(item);
+    qSort(allItems.begin(), allItems.end(), [](const PhotoSortItem *left, const PhotoSortItem *right){
+        return left->text() < right->text();
+    });
 }
 
 PhotoSortItem *PhotoSortModel::photoItem(int row)
