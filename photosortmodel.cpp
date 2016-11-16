@@ -188,6 +188,49 @@ void PhotoSortModel::sync()
         write(workDir_);
 }
 
+void PhotoSortModel::exportPhotos(const QString &suf, bool makeAtWorkDir, const QString &filePrefix)
+{
+    QDir wd(workDir_);
+    QString expPath;
+    if(makeAtWorkDir) {
+        wd.mkdir(suf);
+        expPath = workDir_ + "/" + suf;
+    }
+    else {
+        wd.cdUp();
+        QString dirName = QDir(workDir_).dirName() + "_" + suf;
+        QDir(wd.absolutePath()).mkdir(dirName);
+        expPath = wd.absolutePath() + "/" + dirName;
+    }
+    int count = 0;
+    for(int ct = 0; ct < rowCount(); ++ct) {
+        auto photos = photoItem(ct)->allItems();
+        for(const auto &p : photos) {
+            if(p->isAccepted()) {
+                ++count;
+            }
+        }
+    }
+    int allAccepted = count;
+    count = 1;
+    for(int ct = 0; ct < rowCount(); ++ct) {
+        auto photos = photoItem(ct)->allItems();
+        for(const auto &p : photos) {
+            if(p->isAccepted()) {
+                QFileInfo fi(workDir_ + "/" + p->data(PhotoSortItem::PathRole).toString());
+                if(fi.exists()) {
+                    QFile(fi.absoluteFilePath()).copy(expPath + "/" + filePrefix + QString::asprintf("%05d", count++) + "." + fi.suffix() );
+                    progress((count * 100)/allAccepted);
+                }
+                else {
+                    throw std::runtime_error("No such file: " + fi.fileName().toStdString());
+                }
+            }
+        }
+    }
+    emit(loaded());
+}
+
 void PhotoSortModel::partialDone(int id, int num)
 {
     std::lock_guard<std::mutex> lock(mapMutex_);
@@ -263,4 +306,42 @@ void PhotoSortModel::flatItem(PhotoSortItem *item)
 PhotoSortItem *PhotoSortModel::photoItem(int row)
 {
     return reinterpret_cast<PhotoSortItem *>(item(row, 0));
+}
+
+void PhotoSortModel::loadFull(PhotoSortItem *item)
+{
+    auto loadOne = [=](PhotoSortItem *i){
+        //TODO this is copy of portion of readSinglePhoto
+        auto img = QImage(workDir_ + "/" + i->data(PhotoSortItem::PathRole).toString());
+        ExifData *eData = exif_data_new_from_file((workDir_ + "/" + i->data(PhotoSortItem::PathRole).toString()).toLocal8Bit());
+        int orientation = 0;
+        if (eData) {
+            ExifByteOrder byteOrder = exif_data_get_byte_order(eData);
+            ExifEntry *exifEntry = exif_data_get_entry(eData,
+                                                       EXIF_TAG_ORIENTATION);
+            if (exifEntry)
+                orientation = exif_get_short(exifEntry->data, byteOrder);
+            exif_data_free(eData);
+        }
+        if(orientation == 8) {
+            QTransform tr;
+            tr.rotate(-90);
+            img = img.transformed(tr);
+        }
+        i->setFullPixmap(QPixmap::fromImage(img));
+        return 0;
+    };
+    std::list<std::future<int>> futurs;
+    for(auto i : item->allItems()) {
+        futurs.push_back(std::async(loadOne, i));
+    }
+    for(auto &f : futurs)
+        f.get();
+}
+
+void PhotoSortModel::cleanFull(PhotoSortItem *item)
+{
+    for(auto i : item->allItems()) {
+        i->setFullPixmap();
+    }
 }

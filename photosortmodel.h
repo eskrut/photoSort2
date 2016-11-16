@@ -25,6 +25,7 @@ public slots:
     QModelIndex group(QModelIndexList indexes);
     QModelIndexList ungroup(QModelIndexList indexes);
     void sync();
+    void exportPhotos(const QString &suf = "theBest", bool makeAtWorkDir = false, const QString &filePrefix = "img");
 private:
     std::mutex mapMutex_;
     std::map<int, int> doneMap_;
@@ -39,6 +40,8 @@ private:
     void flatItem(PhotoSortItem *item);
 public:
     PhotoSortItem *photoItem(int row);
+    void loadFull(PhotoSortItem *item);
+    void cleanFull(PhotoSortItem *item);
 };
 
 #endif // PHOTOSORTMODEL_H

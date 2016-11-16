@@ -71,8 +71,11 @@ void PhotoSortMainWindow::createConnections()
 
     connect(preview_->selectionModel(), &QItemSelectionModel::currentChanged,
             [=](const QModelIndex &current, const QModelIndex &previous){
-        Q_UNUSED(previous);
+        auto prevItem = model_->photoItem(previous.row());
+        if(prevItem)
+            model_->cleanFull(prevItem);
         auto item = model_->photoItem(current.row());
+        model_->loadFull(item);
         detailScene_->setupPhotoSortItem(item);
         detailView_->update();
     });
@@ -94,6 +97,13 @@ void PhotoSortMainWindow::createShortCuts()
 {
     auto openShC = new QShortcut(QKeySequence(QKeySequence::Open), this);
     connect(openShC, &QShortcut::activated, this, &PhotoSortMainWindow::openDir);
+
+    auto exportShC = new QShortcut(QKeySequence(QKeySequence::Print), this);
+    connect(exportShC, &QShortcut::activated, [=](){
+        progBar_->setValue(0);
+        progBar_->setVisible(true);
+        model_->exportPhotos();
+    });
 }
 
 void PhotoSortMainWindow::openDir()

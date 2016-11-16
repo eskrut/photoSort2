@@ -21,7 +21,8 @@ public:
         TagsRole,
         AcceptRole,
         PixmapRole,
-        AllItems
+        AllItems,
+        CountAccept
     };
 
 private:
@@ -29,6 +30,7 @@ private:
     QStringList tags_;
     bool isAccepted_;
     QPixmap pixmap_;
+    QPixmap fullPixmap_;
 
 public:
     QVariant data(int role) const;
@@ -38,6 +40,7 @@ public:
 
     bool isAccepted() const;
     QPixmap pixmap() const;
+    void setFullPixmap(const QPixmap &p = QPixmap()) {fullPixmap_ = p;}
 
     // QStandardItem interface
 public:

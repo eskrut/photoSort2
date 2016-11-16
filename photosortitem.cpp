@@ -9,18 +9,21 @@ Q_DECLARE_METATYPE(PHListType)
 PhotoSortItem::PhotoSortItem() :
     isAccepted_(false)
 {
-
+    setFullPixmap();
 }
 
 QVariant PhotoSortItem::data(int role) const
 {
     switch (role) {
     case Qt::DisplayRole:
+    {
+        auto sole = QString("/%1").arg(data(CountAccept).toInt());
         if(type() == SingleImage)
-            return path_;
+            return path_ + sole;
         else
-            return QString::number(allItems().size());
+            return QString::number(allItems().size()) + sole;
         break;
+    }
     case Qt::DecorationRole:
         if(type() == SingleImage) {
             auto pm = QStandardItem::data(Qt::DecorationRole).value<QPixmap>();
@@ -54,7 +57,10 @@ QVariant PhotoSortItem::data(int role) const
         return QVariant::fromValue<>(isAccepted_);
         break;
     case PixmapRole:
-        return pixmap_;
+        if(fullPixmap_.isNull())
+            return pixmap_;
+        else
+            return fullPixmap_;
         break;
     case AllItems:
     {
@@ -67,6 +73,16 @@ QVariant PhotoSortItem::data(int role) const
         else
             all << const_cast<PhotoSortItem*>(this);
         return QVariant::fromValue<PHListType>(all);
+        break;
+    }
+    case CountAccept:
+    {
+        auto items = allItems();
+        int count = 0;
+        for(const auto &i : items)
+            if(i->isAccepted())
+                ++count;
+        return count;
         break;
     }
     case Qt::ToolTipRole:
