@@ -75,10 +75,11 @@ void DetailScene::rejectCurrent()
 
 void DetailScene::acceptOnlyCurrent()
 {
-    for(int ct = 0; ct < photos_.size(); ++ct) {
-        allItems_[ct]->setData(QVariant::fromValue(false), PhotoSortItem::AcceptRole);
-        photos_[ct]->updateAccept();
-    }
+//    for(int ct = 0; ct < photos_.size(); ++ct) {
+//        allItems_[ct]->setData(QVariant::fromValue(false), PhotoSortItem::AcceptRole);
+//        photos_[ct]->updateAccept();
+//    }
+    rejectAll();
     acceptCurrent();
     updateAccepted();
 }
@@ -99,6 +100,44 @@ void DetailScene::toggleCurrent()
                 , PhotoSortItem::AcceptRole);
     photos_[current_]->updateAccept();
     updateAccepted();
+}
+
+void DetailScene::jumpNextAccepted()
+{
+    auto accepted = getAcceptedIndexes();
+    if(accepted.size()) {
+        auto it = accepted.lower_bound(current_+1);
+        if(it != accepted.end()) {
+            setCurrent(*it);
+        }
+        else {
+            setCurrent(*accepted.begin());
+        }
+    }
+}
+
+void DetailScene::jumpPrevAccepted()
+{
+    auto accepted = getAcceptedIndexes();
+    if(accepted.size()) {
+        auto it = accepted.upper_bound(current_);
+        if(it != accepted.end()) {
+            setCurrent(*it);
+        }
+        else {
+            setCurrent(*accepted.rbegin());
+        }
+    }
+}
+
+std::set<int> DetailScene::getAcceptedIndexes()
+{
+    std::set<int> accepted;
+    for(int ct = 0; ct < allItems_.size(); ++ct) {
+        if( allItems_[ct]->data(PhotoSortItem::AcceptRole).toBool() )
+            accepted.insert(ct);
+    }
+    return accepted;
 }
 
 void DetailScene::ensure(int index, const double scale)

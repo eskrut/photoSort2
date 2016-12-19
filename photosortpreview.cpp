@@ -4,6 +4,7 @@
 #include "photosortitem.h"
 
 #include <QKeyEvent>
+#include <QDebug>
 
 PhotoSortPreview::PhotoSortPreview(QWidget *parent) : QListView(parent)
 {
@@ -39,6 +40,9 @@ void PhotoSortPreview::generateDefaultActionMap()
 
     actionMap_[Actions::DetailedRight] = Qt::Key_K;
     actionMap_[Actions::DetailedLeft] = Qt::Key_L;
+
+    actionMap_[Actions::NextAccepted] = Qt::Key_I;
+    actionMap_[Actions::PrevAccepted] = Qt::Key_O;
 }
 
 void PhotoSortPreview::keyPressEvent(QKeyEvent *event)
@@ -47,6 +51,16 @@ void PhotoSortPreview::keyPressEvent(QKeyEvent *event)
 
     auto key = event->key();
     auto act = actionMap_.key(key, Actions::NoAction);
+
+    int numToGroup = 0;
+    if( act == Actions::NoAction ) {
+        if( event->modifiers() == Qt::NoModifier ) {
+            if( key >= Qt::Key_2 && key <= Qt::Key_9 ) {
+                numToGroup = key - Qt::Key_1 + 1;
+                act = Actions::GroupUpTo;
+            }
+        }
+    }
 
     switch (act) {
     case Actions::Accept:
@@ -86,6 +100,18 @@ void PhotoSortPreview::keyPressEvent(QKeyEvent *event)
         for(auto item : indexes)
             selectionModel()->select(item, QItemSelectionModel::Select);
         event->accept();
+        break;
+    }
+    case Actions::GroupUpTo:
+    {
+        if(numToGroup && items.size() == 1){
+            auto index = phModel_->group(items.front(), numToGroup);
+            if(index.row() < model()->rowCount())
+                setCurrentIndex(model()->index(index.row()+1, 0));
+            else
+                setCurrentIndex(model()->index(index.row(), 0));
+            event->accept();
+        }
         break;
     }
     case Actions::FocusToNext:
@@ -141,6 +167,14 @@ void PhotoSortPreview::keyPressEvent(QKeyEvent *event)
         break;
     case Actions::DetailedRight:
         emit(rightInGroup());
+        event->accept();
+        break;
+    case Actions::NextAccepted:
+        emit(nextAcceptedInGroup());
+        event->accept();
+        break;
+    case Actions::PrevAccepted:
+        emit(prevAcceptedInGroup());
         event->accept();
         break;
     default:

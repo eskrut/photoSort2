@@ -23,6 +23,7 @@ private:
     void fill(const QString &path);
 public slots:
     QModelIndex group(QModelIndexList indexes);
+    QModelIndex group(QModelIndex index, int numToGroup);
     QModelIndexList ungroup(QModelIndexList indexes);
     void sync();
     void exportPhotos(const QString &suf = "theBest", bool makeAtWorkDir = false, const QString &filePrefix = "img");

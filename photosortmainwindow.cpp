@@ -5,6 +5,7 @@
 #include <QShortcut>
 #include <QThread>
 #include <QMetaObject>
+#include <QSplitter>
 
 #include "photosortpreview.h"
 #include "photosortmodel.h"
@@ -25,8 +26,8 @@ PhotoSortMainWindow::PhotoSortMainWindow(QWidget *parent) :
     setCentralWidget(cw);
 
     preview_ = new PhotoSortPreview(this);
-
-    lo->addWidget(preview_);
+    preview_->setResizeMode(QListView::Adjust);
+    preview_->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 
     modelThread_ = new QThread(this);
     model_ = new PhotoSortModel;
@@ -37,7 +38,12 @@ PhotoSortMainWindow::PhotoSortMainWindow(QWidget *parent) :
 
     detailView_ = new QGraphicsView(this);
 
-    lo->addWidget(detailView_);
+    auto spl = new QSplitter(this);
+    spl->addWidget(preview_);
+    spl->addWidget(detailView_);
+    lo->addWidget(spl);
+    spl->setStretchFactor(0, 1);
+    spl->setStretchFactor(1, 1);
 
     detailScene_ = new DetailScene(this);
     detailView_->setScene(detailScene_);
@@ -86,6 +92,8 @@ void PhotoSortMainWindow::createConnections()
     connect(preview_, &PhotoSortPreview::toggle, detailScene_, &DetailScene::toggleCurrent);
     connect(preview_, &PhotoSortPreview::acceptOnly, detailScene_, &DetailScene::acceptOnlyCurrent);
     connect(preview_, &PhotoSortPreview::rejectAll, detailScene_, &DetailScene::rejectAll);
+    connect(preview_, &PhotoSortPreview::nextAcceptedInGroup, detailScene_, &DetailScene::jumpNextAccepted);
+    connect(preview_, &PhotoSortPreview::prevAcceptedInGroup, detailScene_, &DetailScene::jumpPrevAccepted);
     connect(preview_, &PhotoSortPreview::accept, model_, &PhotoSortModel::sync);
     connect(preview_, &PhotoSortPreview::reject, model_, &PhotoSortModel::sync);
     connect(preview_, &PhotoSortPreview::toggle, model_, &PhotoSortModel::sync);

@@ -17,6 +17,7 @@ private:
         NoAction = -1,
         Group,
         UnGroup,
+        GroupUpTo,
         Accept,
         Reject,
         SwapAcceptReject,
@@ -28,7 +29,9 @@ private:
         ToggleSelectionFocusToPrev,
         ClearSelection,
         DetailedLeft,
-        DetailedRight
+        DetailedRight,
+        NextAccepted,
+        PrevAccepted
     };
     QMap<Actions, int> actionMap_;
     void generateDefaultActionMap();
@@ -41,6 +44,8 @@ signals:
     void rejectAll();
     void leftInGroup();
     void rightInGroup();
+    void nextAcceptedInGroup();
+    void prevAcceptedInGroup();
 public slots:
 
 protected:

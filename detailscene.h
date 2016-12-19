@@ -6,6 +6,8 @@
 
 #include "photosortitem.h"
 
+#include <set>
+
 class PhotoDetailedItem;
 
 class DetailScene : public QGraphicsScene
@@ -22,6 +24,10 @@ public slots:
     void acceptOnlyCurrent();
     void rejectAll();
     void toggleCurrent();
+    void jumpNextAccepted();
+    void jumpPrevAccepted();
+private:
+    std::set<int> getAcceptedIndexes();
 private:
     QList<PhotoDetailedItem *> photos_;
     QList<PhotoDetailedItem *> acceptedPhotos_;

@@ -111,8 +111,11 @@ void PhotoSortModel::fill(const QString &path)
         for(int row = start; row < stop; ++row) {
             auto photo = photoItem(row);
             readDown(photo, path);
-//            if(row % 10 == 0)
-                QMetaObject::invokeMethod(this, "partialDone", Qt::DirectConnection, Q_ARG(int, id), Q_ARG(int, row-start));
+                QMetaObject::invokeMethod(this,
+                                          "partialDone",
+                                          Qt::DirectConnection,
+                                          Q_ARG(int, id),
+                                          Q_ARG(int, row-start));
         }
         return 0;
     };
@@ -129,6 +132,8 @@ void PhotoSortModel::fill(const QString &path)
     }
     for(auto &f : futures)
         f.get();
+
+//    read(0, 0, numRows);
 
     emit(loaded());
     for(unsigned row = 0; row < numRows; ++row)
@@ -153,6 +158,16 @@ QModelIndex PhotoSortModel::group(QModelIndexList indexes)
     dataChanged(index(0, 0), index(rowCount(), 0), QVector<int>() << Qt::DisplayRole << Qt::DecorationRole);
     write(workDir_);
     return grItem->index();
+}
+
+QModelIndex PhotoSortModel::group(QModelIndex index, int numToGroup)
+{
+    QModelIndexList indexes;
+    for (int ct = 0; ct < numToGroup; ++ct) {
+        indexes << this->index(index.row() + ct, 0, index.parent());
+    }
+
+    return group(indexes);
 }
 
 QModelIndexList PhotoSortModel::ungroup(QModelIndexList indexes)
