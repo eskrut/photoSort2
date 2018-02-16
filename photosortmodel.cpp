@@ -346,12 +346,28 @@ void PhotoSortModel::loadFull(PhotoSortItem *item)
         i->setFullPixmap(QPixmap::fromImage(img));
         return 0;
     };
-    std::list<std::future<int>> futurs;
-    for(auto i : item->allItems()) {
-        futurs.push_back(std::async(loadOne, i));
+
+    auto list = item->allItems().toStdList();
+    auto work = [loadOne](decltype(list.end()) begin, decltype(list.end()) end){
+        for(auto it = begin; it != end; ++it)
+            loadOne(*it);
+    };
+    size_t hc = std::thread::hardware_concurrency();
+    if(hc == 0) hc = 8;
+    auto numThreads = std::min(list.size(), hc);
+    auto chunkPerThread = list.size() / numThreads;
+    auto threadBegin = list.begin();
+    auto threadEnd = threadBegin;
+    std::advance(threadEnd, chunkPerThread);
+    std::list<std::future<void>> futures;
+    for(size_t thId = 0; thId < numThreads - 1; ++thId){
+        futures.push_back(std::async(std::launch::async,
+                                     work, threadBegin, threadEnd));
+        threadBegin = threadEnd;
+        std::advance(threadEnd, chunkPerThread);
     }
-    for(auto &f : futurs)
-        f.get();
+    work(threadBegin, list.end());
+    for(auto &f : futures) f.get();
 }
 
 void PhotoSortModel::cleanFull(PhotoSortItem *item)

@@ -145,6 +145,11 @@ QPixmap PhotoSortItem::pixmap() const
     return data(PixmapRole).value<QPixmap>();
 }
 
+void PhotoSortItem::setFullPixmap(const QPixmap &p) {
+    size_t truncate = 1920;
+    fullPixmap_ = std::max(p.width(), p.height()) > truncate ? p.scaled(truncate, truncate, Qt::KeepAspectRatio) : p;
+}
+
 void PhotoSortItem::read(QDataStream &in)
 {
     QPixmap p(QApplication::style()->standardIcon(QStyle::StandardPixmap::SP_MessageBoxQuestion).pixmap(QSize(150, 150)));

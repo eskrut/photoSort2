@@ -40,7 +40,7 @@ public:
 
     bool isAccepted() const;
     QPixmap pixmap() const;
-    void setFullPixmap(const QPixmap &p = QPixmap()) {fullPixmap_ = p;}
+    void setFullPixmap(const QPixmap &p = QPixmap());
 
     // QStandardItem interface
 public:
