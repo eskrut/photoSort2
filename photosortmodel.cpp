@@ -4,6 +4,7 @@
 #include <QDebug>
 #include <QStyle>
 #include <QApplication>
+#include <QDateTime>
 
 #include <list>
 #include <future>
@@ -218,24 +219,15 @@ void PhotoSortModel::exportPhotos(const QString &suf, bool makeAtWorkDir, const 
         expPath = wd.absolutePath() + "/" + dirName;
     }
     int count = 0;
-    for(int ct = 0; ct < rowCount(); ++ct) {
-        auto photos = photoItem(ct)->allItems();
-        for(const auto &p : photos) {
-            if(p->isAccepted()) {
-                ++count;
-            }
-        }
-    }
-    int allAccepted = count;
-    count = 1;
+    std::multimap<QDateTime, PhotoSortItem *> timeMap;
     for(int ct = 0; ct < rowCount(); ++ct) {
         auto photos = photoItem(ct)->allItems();
         for(const auto &p : photos) {
             if(p->isAccepted()) {
                 QFileInfo fi(workDir_ + "/" + p->data(PhotoSortItem::PathRole).toString());
                 if(fi.exists()) {
-                    QFile(fi.absoluteFilePath()).copy(expPath + "/" + filePrefix + QString::asprintf("%05d", count++) + "." + fi.suffix() );
-                    progress((count * 100)/allAccepted);
+                    timeMap.insert(std::make_pair(fi.created(), p));
+                    ++count;
                 }
                 else {
                     throw std::runtime_error("No such file: " + fi.fileName().toStdString());
@@ -243,6 +235,29 @@ void PhotoSortModel::exportPhotos(const QString &suf, bool makeAtWorkDir, const 
             }
         }
     }
+    int allAccepted = count;
+    count = 1;
+    for(const auto &r : timeMap) {
+        auto p = r.second;
+        QFileInfo fi(workDir_ + "/" + p->data(PhotoSortItem::PathRole).toString());
+        QFile(fi.absoluteFilePath()).copy(expPath + "/" + filePrefix + QString::asprintf("%05d", count++) + "." + fi.suffix() );
+        progress((count * 100)/allAccepted);
+    }
+//    for(int ct = 0; ct < rowCount(); ++ct) {
+//        auto photos = photoItem(ct)->allItems();
+//        for(const auto &p : photos) {
+//            if(p->isAccepted()) {
+//                QFileInfo fi(workDir_ + "/" + p->data(PhotoSortItem::PathRole).toString());
+//                if(fi.exists()) {
+//                    QFile(fi.absoluteFilePath()).copy(expPath + "/" + filePrefix + QString::asprintf("%05d", count++) + "." + fi.suffix() );
+//                    progress((count * 100)/allAccepted);
+//                }
+//                else {
+//                    throw std::runtime_error("No such file: " + fi.fileName().toStdString());
+//                }
+//            }
+//        }
+//    }
     emit(loaded());
 }
 
