@@ -43,6 +43,9 @@ void PhotoSortPreview::generateDefaultActionMap()
 
     actionMap_[Actions::NextAccepted] = Qt::Key_I;
     actionMap_[Actions::PrevAccepted] = Qt::Key_O;
+
+    actionMap_[Actions::Zoom] = Qt::Key_Z;
+    actionMap_[Actions::Unzoom] = Qt::Key_X;
 }
 
 void PhotoSortPreview::keyPressEvent(QKeyEvent *event)
@@ -177,9 +180,34 @@ void PhotoSortPreview::keyPressEvent(QKeyEvent *event)
         emit(prevAcceptedInGroup());
         event->accept();
         break;
+    case Actions::Zoom:
+        emit(zoom());
+        event->accept();
+        break;
+    case Actions::Unzoom:
+        emit(unzoom());
+        event->accept();
+        break;
     default:
         break;
     }
 
     update();
+}
+
+
+void PhotoSortPreview::selectionChanged(const QItemSelection &selected, const QItemSelection &deselected)
+{
+    if( selected.indexes().size() == 1) {
+        auto sel = selected.indexes().front();
+        for(int ct = 0; ct < model()->rowCount(); ++ct) {
+            auto i = model()->index(ct, 0);
+            int shift = 0;
+            if((ct - (sel.row() + 1)) < 10 && ct >= (sel.row()))
+                shift = ct - sel.row() + 1;
+            model()->setData(i, shift, PhotoSortItem::ShiftCountRole);
+            update(i);
+        }
+//        dataChanged(model()->index(0, 0), model()->index(model()->rowCount()-1, 0));
+    }
 }

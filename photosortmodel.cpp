@@ -93,15 +93,27 @@ void PhotoSortModel::build(QString path)
     if(QFileInfo(path + "/.cache").exists()) { //read cache
         read(path);
     }
-    else {
+//    else {
         auto entries = parse(path);
         for(const auto &e : entries) {
             auto photo = new PhotoSortItem;
             photo->setData(e, PhotoSortItem::PathRole);
+            bool found = false;
+            for(int ct = 0; ct < invisibleRootItem()->rowCount(); ++ct) {
+                auto i = reinterpret_cast<PhotoSortItem*>(invisibleRootItem()->child(ct));
+                if(photo->isSame(i)) {
+                    found = true;
+                    break;
+                }
+            }
+            if(found) {
+                delete photo;
+                continue;
+            }
             photo->setData(p, Qt::DecorationRole);
             invisibleRootItem()->appendRow(photo);
         }
-    }
+//    }
 }
 
 void PhotoSortModel::fill(const QString &path)

@@ -7,7 +7,8 @@
 Q_DECLARE_METATYPE(PHListType)
 
 PhotoSortItem::PhotoSortItem() :
-    isAccepted_(false)
+    isAccepted_(false),
+    shiftCount_(0)
 {
     setFullPixmap();
 }
@@ -18,8 +19,14 @@ QVariant PhotoSortItem::data(int role) const
     case Qt::DisplayRole:
     {
         auto sole = QString("/%1").arg(data(CountAccept).toInt());
-        if(type() == SingleImage)
-            return path_ + sole;
+        if(shiftCount_ > 0)
+            sole.append(QString(" %1").arg(shiftCount_));
+        if(type() == SingleImage){
+            auto p = path_;
+            if(p.length() > 8)
+                p.truncate(8);
+            return p + sole;
+        }
         else
             return QString::number(allItems().size()) + sole;
         break;
@@ -116,6 +123,9 @@ void PhotoSortItem::setData(const QVariant &value, int role)
         pixmap_ = value.value<QPixmap>();
         setData(pixmap_.scaled(QSize(150, 150), Qt::KeepAspectRatio), Qt::DecorationRole);
         break;
+    case ShiftCountRole:
+        shiftCount_ = value.toInt();
+        break;
     default:
         QStandardItem::setData(value, role);
         break;
@@ -132,7 +142,14 @@ int PhotoSortItem::type() const
 
 PHListType PhotoSortItem::allItems() const
 {
-    return data(AllItems).value<PHListType>();
+    try {
+
+        auto d = data(AllItems);
+        auto v = d.value<PHListType>();
+        return v;
+    } catch (...) {
+        return PHListType();
+    }
 }
 
 bool PhotoSortItem::isAccepted() const
@@ -148,6 +165,22 @@ QPixmap PhotoSortItem::pixmap() const
 void PhotoSortItem::setFullPixmap(const QPixmap &p) {
     size_t truncate = 1920;
     fullPixmap_ = std::max(p.width(), p.height()) > truncate ? p.scaled(truncate, truncate, Qt::KeepAspectRatio) : p;
+}
+
+bool PhotoSortItem::isSame(PhotoSortItem *item)
+{
+    QList<PhotoSortItem*> thisList, list;
+
+    thisList = allItems();
+    list = item->allItems();
+    for(auto &i : list) {
+        for(auto &t : thisList) {
+            if(i->path_ == t->path_)
+                return true;
+        }
+    }
+
+    return false;
 }
 
 void PhotoSortItem::read(QDataStream &in)

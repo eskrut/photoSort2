@@ -26,6 +26,8 @@ public slots:
     void toggleCurrent();
     void jumpNextAccepted();
     void jumpPrevAccepted();
+    void zoom();
+    void unzoom();
 private:
     std::set<int> getAcceptedIndexes();
 private:

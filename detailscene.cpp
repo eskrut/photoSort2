@@ -130,6 +130,16 @@ void DetailScene::jumpPrevAccepted()
     }
 }
 
+void DetailScene::zoom()
+{
+    photos_[current_]->crop(0.5f, 0.5f, photos_[current_]->cropScaling()*1.2f);
+}
+
+void DetailScene::unzoom()
+{
+    photos_[current_]->crop(0, 0, 0);
+}
+
 std::set<int> DetailScene::getAcceptedIndexes()
 {
     std::set<int> accepted;
@@ -161,9 +171,9 @@ void DetailScene::setCurrent(int index)
         current_ = index;
         const double scale = 0.2;
         photos_[index]->setPos(0, 0);
-        photos_[index]->setScale(1.0);
+        photos_[index]->setScale(1.0 /** photos_[index]->cropScaling()*/);
         photos_[index]->updateAccept();
-        auto pos = photos_[index]->boundingRect().bottomLeft();
+        auto pos = photos_[index]->boundingRect().topLeft() + QPointF(0, /*photos_[index]->cropScaling()**/photos_[index]->boundingRect().height());
         for(int ct = 0; ct < photos_.size(); ++ct) {
             if(ct != index) {
                 photos_[ct]->setScale(scale);
@@ -177,7 +187,7 @@ void DetailScene::setCurrent(int index)
                 pos.setX(pos.x() + line_->boundingRect().width());
             }
         }
-        ensure(index, scale);
+        ensure(index, scale /** photos_[index]->cropScaling()*/);
     }
     else if (firstTimeOverflow_ == false) {
         firstTimeOverflow_ = true;

@@ -31,7 +31,9 @@ private:
         DetailedLeft,
         DetailedRight,
         NextAccepted,
-        PrevAccepted
+        PrevAccepted,
+        Zoom,
+        Unzoom
     };
     QMap<Actions, int> actionMap_;
     void generateDefaultActionMap();
@@ -46,10 +48,16 @@ signals:
     void rightInGroup();
     void nextAcceptedInGroup();
     void prevAcceptedInGroup();
+    void zoom();
+    void unzoom();
 public slots:
 
 protected:
     void keyPressEvent(QKeyEvent *event);
+
+    // QAbstractItemView interface
+protected slots:
+    void selectionChanged(const QItemSelection &selected, const QItemSelection &deselected);
 };
 
 #endif // PHOTOSORTPREVIEW_H

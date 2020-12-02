@@ -94,6 +94,8 @@ void PhotoSortMainWindow::createConnections()
     connect(preview_, &PhotoSortPreview::rejectAll, detailScene_, &DetailScene::rejectAll);
     connect(preview_, &PhotoSortPreview::nextAcceptedInGroup, detailScene_, &DetailScene::jumpNextAccepted);
     connect(preview_, &PhotoSortPreview::prevAcceptedInGroup, detailScene_, &DetailScene::jumpPrevAccepted);
+    connect(preview_, &PhotoSortPreview::zoom, detailScene_, &DetailScene::zoom);
+    connect(preview_, &PhotoSortPreview::unzoom, detailScene_, &DetailScene::unzoom);
     connect(preview_, &PhotoSortPreview::accept, model_, &PhotoSortModel::sync);
     connect(preview_, &PhotoSortPreview::reject, model_, &PhotoSortModel::sync);
     connect(preview_, &PhotoSortPreview::toggle, model_, &PhotoSortModel::sync);

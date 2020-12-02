@@ -14,6 +14,8 @@ public:
 private:
     const PhotoSortItem *item_;
     QGraphicsPixmapItem *acceptance_;
+    QGraphicsPixmapItem *photo_;
+    float cropScaling_;
 
     QPixmap accPix_;
     QPixmap rejPix_;
@@ -22,6 +24,8 @@ public:
     void updateAccept();
     QRectF boundingRect() const;
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget);
+    void crop(float xCenterPortion, float yCenterPortion, float scaling);
+    float cropScaling() const {return cropScaling_;}
 };
 
 

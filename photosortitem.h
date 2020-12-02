@@ -22,7 +22,8 @@ public:
         AcceptRole,
         PixmapRole,
         AllItems,
-        CountAccept
+        CountAccept,
+        ShiftCountRole
     };
 
 private:
@@ -31,6 +32,7 @@ private:
     bool isAccepted_;
     QPixmap pixmap_;
     QPixmap fullPixmap_;
+    int shiftCount_;
 
 public:
     QVariant data(int role) const;
@@ -41,6 +43,8 @@ public:
     bool isAccepted() const;
     QPixmap pixmap() const;
     void setFullPixmap(const QPixmap &p = QPixmap());
+
+    bool isSame(PhotoSortItem *item);
 
     // QStandardItem interface
 public:
