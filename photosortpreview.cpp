@@ -88,13 +88,21 @@ void PhotoSortPreview::keyPressEvent(QKeyEvent *event)
         break;
     case Actions::Group:
     {
-        auto index = phModel_->group(items);
-        if(index.row() < model()->rowCount())
-            setCurrentIndex(model()->index(index.row()+1, 0));
+        if(event->modifiers() == Qt::ShiftModifier){
+            phModel_->groupByTimeStamp(10, 15);
+            event->accept();
+            break;
+        }
         else
-            setCurrentIndex(model()->index(index.row(), 0));
-        event->accept();
-        break;
+        {
+            auto index = phModel_->group(items);
+            if(index.row() < model()->rowCount())
+                setCurrentIndex(model()->index(index.row()+1, 0));
+            else
+                setCurrentIndex(model()->index(index.row(), 0));
+            event->accept();
+            break;
+        }
     }
     case Actions::UnGroup:
     {

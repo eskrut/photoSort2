@@ -27,6 +27,7 @@ public slots:
     QModelIndexList ungroup(QModelIndexList indexes);
     void sync();
     void exportPhotos(const QString &suf = "theBest", bool makeAtWorkDir = false, const QString &filePrefix = "img");
+    void groupByTimeStamp(int secondsSpan = 10, int maxnum = 15);
 private:
     std::mutex mapMutex_;
     std::map<int, int> doneMap_;

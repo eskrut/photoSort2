@@ -3,6 +3,7 @@
 
 #include "QStandardItem"
 #include "QPixmap"
+#include <QDateTime>
 
 class PhotoSortItem;
 using PHListType = QList<PhotoSortItem*>;
@@ -23,7 +24,9 @@ public:
         PixmapRole,
         AllItems,
         CountAccept,
-        ShiftCountRole
+        ShiftCountRole,
+        TimeStamp,
+        ProjectPathRole
     };
 
 private:
@@ -33,6 +36,7 @@ private:
     QPixmap pixmap_;
     QPixmap fullPixmap_;
     int shiftCount_;
+    QDateTime timeStamp_;
 
 public:
     QVariant data(int role) const;

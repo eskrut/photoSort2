@@ -31,6 +31,16 @@ void readSinglePhoto(PhotoSortItem *photo, const QString &path){
                 auto img = QImage(thumbnailPath);
                 p = QPixmap::fromImage(img);
                 photo->setData(p, PhotoSortItem::PixmapRole);
+                ExifData *eData = exif_data_new_from_file((path + "/" + imgPath).toLocal8Bit());
+                if (eData) {
+                    ExifByteOrder byteOrder = exif_data_get_byte_order(eData);
+                    ExifEntry *exifEntry = exif_data_get_entry(eData,
+                                                    EXIF_TAG_DATE_TIME);
+                    auto datetime = QDateTime::fromString(QString::fromLocal8Bit(reinterpret_cast<char *>(exifEntry->data)),
+                                                          QString("yyyy:MM:dd hh:mm:ss"));
+                    photo->setData(datetime, PhotoSortItem::TimeStamp);
+                    exif_data_free(eData);
+                }
                 isLoaded = true;
             }
             catch(...){}
@@ -45,6 +55,11 @@ void readSinglePhoto(PhotoSortItem *photo, const QString &path){
                                                            EXIF_TAG_ORIENTATION);
                 if (exifEntry)
                     orientation = exif_get_short(exifEntry->data, byteOrder);
+                exifEntry = exif_data_get_entry(eData,
+                                                EXIF_TAG_DATE_TIME);
+                auto datetime = QDateTime::fromString(QString::fromLocal8Bit(reinterpret_cast<char *>(exifEntry->data)),
+                                                      QString("yyyy:MM:dd hh:mm:ss"));
+                photo->setData(datetime, PhotoSortItem::TimeStamp);
                 exif_data_free(eData);
             }
             if(orientation == 8) {
@@ -98,6 +113,7 @@ void PhotoSortModel::build(QString path)
         for(const auto &e : entries) {
             auto photo = new PhotoSortItem;
             photo->setData(e, PhotoSortItem::PathRole);
+            photo->setData(path, PhotoSortItem::ProjectPathRole);
             bool found = false;
             for(int ct = 0; ct < invisibleRootItem()->rowCount(); ++ct) {
                 auto i = reinterpret_cast<PhotoSortItem*>(invisibleRootItem()->child(ct));
@@ -273,6 +289,35 @@ void PhotoSortModel::exportPhotos(const QString &suf, bool makeAtWorkDir, const 
     emit(loaded());
 }
 
+void PhotoSortModel::groupByTimeStamp(int secondsSpan, int maxnum)
+{
+    emit(progress(0));
+    int curLookingRow = 0;
+    auto getDt = [this](int row){ return item(row)->data(PhotoSortItem::TimeStamp).toDateTime();};
+    while(curLookingRow < this->rowCount()){
+        int numToGroup = 1;
+        auto dt = getDt(curLookingRow);
+        if(dt.isValid()){
+            while(curLookingRow + numToGroup < this->rowCount() && numToGroup < maxnum){
+                auto nextDt = getDt(curLookingRow + numToGroup);
+                if(!nextDt.isValid())
+                    break;
+                if(dt.secsTo(nextDt) < secondsSpan)
+                    numToGroup++;
+                else
+                    break;
+            }
+            if(numToGroup > 1){
+                auto grouped = group(index(curLookingRow, 0), numToGroup);
+                emit(progress(curLookingRow*100/rowCount()));
+                emit(dataChanged(index(curLookingRow, 0), index(curLookingRow + numToGroup, 0)));
+            }
+        }
+        curLookingRow += 1/*numToGroup*/;
+    }
+    emit(progress(100));
+}
+
 void PhotoSortModel::partialDone(int id, int num)
 {
     std::lock_guard<std::mutex> lock(mapMutex_);
@@ -363,6 +408,11 @@ void PhotoSortModel::loadFull(PhotoSortItem *item)
                                                        EXIF_TAG_ORIENTATION);
             if (exifEntry)
                 orientation = exif_get_short(exifEntry->data, byteOrder);
+            exifEntry = exif_data_get_entry(eData,
+                                            EXIF_TAG_DATE_TIME);
+            auto datetime = QDateTime::fromString(QString::fromLocal8Bit(reinterpret_cast<char *>(exifEntry->data)),
+                                                  QString("yyyy:MM:dd hh:mm:ss"));
+            item->setData(datetime, PhotoSortItem::TimeStamp);
             exif_data_free(eData);
         }
         if(orientation == 8) {

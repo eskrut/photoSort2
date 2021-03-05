@@ -73,7 +73,14 @@ void PhotoSortMainWindow::createConnections()
 {
     connect(model_, &PhotoSortModel::loaded, this, &PhotoSortMainWindow::onLoadFinished, Qt::ConnectionType::QueuedConnection);
     connect(model_, &PhotoSortModel::progress, progBar_, &QProgressBar::setValue);
-    connect(model_, &PhotoSortModel::progress, [=](int prog){Q_UNUSED(prog); preview_->update();});
+    connect(model_, &PhotoSortModel::progress, [=](int prog){
+//        progBar_->setValue(prog);
+        if(prog == 0)
+            progBar_->setVisible(true);
+        if(prog >= 100)
+            progBar_->setVisible(false);
+        preview_->update();
+    });
 
     connect(preview_->selectionModel(), &QItemSelectionModel::currentChanged,
             [=](const QModelIndex &current, const QModelIndex &previous){

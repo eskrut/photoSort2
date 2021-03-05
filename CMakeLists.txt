@@ -39,4 +39,6 @@ else()
     error("Not implemented")
 endif()
 
-target_link_libraries(${PROJECT_NAME} exif)
+find_package(Threads REQUIRED)
+
+target_link_libraries(${PROJECT_NAME} Threads::Threads exif)

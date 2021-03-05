@@ -102,6 +102,11 @@ QVariant PhotoSortItem::data(int role) const
         return tt;
         break;
     }
+    case TimeStamp:
+    {
+        return timeStamp_;
+        break;
+    }
     default:
         return QStandardItem::data(role);
     }
@@ -125,6 +130,9 @@ void PhotoSortItem::setData(const QVariant &value, int role)
         break;
     case ShiftCountRole:
         shiftCount_ = value.toInt();
+        break;
+    case TimeStamp:
+        timeStamp_ = value.toDateTime();
         break;
     default:
         QStandardItem::setData(value, role);
